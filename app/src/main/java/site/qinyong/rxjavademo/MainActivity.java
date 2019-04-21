@@ -12,6 +12,8 @@ import io.reactivex.ObservableOnSubscribe;
 import io.reactivex.Observer;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Consumer;
+import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
@@ -19,68 +21,42 @@ import retrofit2.converter.gson.GsonConverterFactory;
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
     private Button mButton;
-    private TextView mTextView;
-    private Api api;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        //初始化Retrofit
-        Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl("http://qinyong.site:8090")
-                .addConverterFactory(GsonConverterFactory.create())
-                .build();
-        api = retrofit.create(Api.class);
         initView();
     }
 
     private void initView() {
         mButton = findViewById(R.id.button);
-        mTextView = findViewById(R.id.textView);
         mButton.setOnClickListener(this);
-
     }
 
 
-
+    //Map操作符对原始Observable发射的每一项数据应用到一个你指定的函数，然后返回一个新的Observable
     @Override
     public void onClick(View v) {
-        Observable.create(new ObservableOnSubscribe<ResponseBean>() {
-            @Override
-            public void subscribe(ObservableEmitter<ResponseBean> emitter) throws Exception {
-
-                ResponseBean responseBean = api.getUserInfoWithPath().execute().body();
-
-                emitter.onNext(responseBean);
-            }
-        }).subscribeOn(Schedulers.io())                     //subscribeOn()指定Observable（被观察者）的线程
-                .observeOn(AndroidSchedulers.mainThread())  //observerOn()指定Observer（观察者）的线程
-                .subscribe(new Observer<ResponseBean>() {
+        Disposable disposable = Observable.just(1,2,3)
+                .map(new Function<Integer, String>() {
                     @Override
-                    public void onSubscribe(Disposable d) {
-
+                    public String apply(Integer integer) throws Exception {
+                        return "Integer " + integer + "->change to String " + integer;
                     }
-
+                })
+                .subscribe(new Consumer<String>() {
                     @Override
-                    public void onNext(ResponseBean responseBean) {
-                        LogUtils.e("the response is " + responseBean);
-                        mTextView.setText("user name is " + responseBean.getMsg());
-                    }
-
-                    @Override
-                    public void onError(Throwable e) {
-                        LogUtils.e("the error is " + e);
-                        mTextView.setText("user error is " + e);
-                    }
-
-                    @Override
-                    public void onComplete() {
-
+                    public void accept(String s) throws Exception {
+                        LogUtils.e("the single is " + s);
                     }
                 });
-    }
 
+        if(disposable.isDisposed()){
+            LogUtils.e("已经丢弃");
+        }else {
+            LogUtils.e("没有丢弃，任然可用");
+        }
+    }
 
 }
